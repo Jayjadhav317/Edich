@@ -30,6 +30,11 @@ const shareBoard = async (id, email) => {
   return response.data;
 };
 
+const leaveBoard = async (id) => {
+  const response = await api.post(`/drawings/${id}/leave`);
+  return response.data;
+};
+
 export const boardService = {
   createBoard,
   getBoards,
@@ -37,4 +42,5 @@ export const boardService = {
   updateBoard,
   deleteBoard,
   shareBoard,
+  leaveBoard,
 };

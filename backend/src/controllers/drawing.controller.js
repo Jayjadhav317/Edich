@@ -1,5 +1,6 @@
 const Drawing = require("../models/drawing.model");
 const User = require("../models/user.model");
+const nodemailer = require("nodemailer");
 
 const createDrawing = async (req, res) => {
   try {
@@ -178,9 +179,113 @@ const shareDrawing = async (req, res) => {
     drawing.collaborators.push(collaborator._id);
     await drawing.save();
 
+    // Fetch the sender user profile to get their name
+    const sender = await User.findById(req.user.id);
+    const senderName = sender ? sender.name : "A user";
+
+    let emailSent = false;
+    let mailError = null;
+    let emailPreview = null;
+
+    try {
+      // Configure mail transporter
+      let transporter;
+      let isTest = false;
+
+      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || "587"),
+          secure: process.env.SMTP_SECURE === "true",
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+      } else {
+        isTest = true;
+        // Fallback to ethereal email test account for zero-config testing
+        const testAccount = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+          host: testAccount.smtp.host,
+          port: testAccount.smtp.port,
+          secure: testAccount.smtp.secure,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+      }
+
+      const mailOptions = {
+        from: isTest ? '"Excalidraw Clone" <no-reply@excalidrawclone.com>' : process.env.SMTP_USER,
+        to: email,
+        subject: `Invitation to collaborate on: ${drawing.title}`,
+        text: `Hello,\n\nYou have been invited by ${senderName} to collaborate on their whiteboard drawing: "${drawing.title}".\n\nClick the link below to open the drawing:\nhttp://localhost:5173/canvas/${drawing._id}?invited=true\n\nHappy drawing!`,
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 500px; border: 1px solid #eee; border-radius: 12px; margin: 0 auto;">
+            <h2 style="color: #6965db; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px;">Excalidraw Collaboration Invite</h2>
+            <p>Hello,</p>
+            <p><strong>${senderName}</strong> has invited you to collaborate on their whiteboard drawing: <strong>"${drawing.title}"</strong>.</p>
+            <p style="margin: 25px 0; text-align: center;">
+              <a href="http://localhost:5173/canvas/${drawing._id}?invited=true" style="background-color: #6965db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Open Workspace</a>
+            </p>
+            <p style="font-size: 11px; color: #888; border-top: 1px solid #f3f4f6; padding-top: 12px; margin-top: 20px;">
+              If the button above does not work, copy and paste this link in your browser: <br/> 
+              <a href="http://localhost:5173/canvas/${drawing._id}?invited=true" style="color: #6965db;">http://localhost:5173/canvas/${drawing._id}?invited=true</a>
+            </p>
+          </div>
+        `,
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log("Email sent successfully: %s", info.messageId);
+      emailSent = true;
+      if (isTest) {
+        emailPreview = nodemailer.getTestMessageUrl(info);
+        console.log("Ethereal test email preview URL: %s", emailPreview);
+      }
+    } catch (err) {
+      console.error("SMTP Mail Send Error:", err);
+      mailError = err.message;
+    }
+
     res.status(200).json({
-      message: "Drawing shared successfully",
+      message: emailSent 
+        ? "Drawing shared successfully and invitation email sent" 
+        : "Drawing shared successfully in database (email invitation failed)",
       drawing,
+      emailSent,
+      emailPreview,
+      mailError
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
+// Leave a collaborative drawing
+const leaveDrawing = async (req, res) => {
+  try {
+    const drawingId = req.params.id;
+    const drawing = await Drawing.findById(drawingId);
+
+    if (!drawing) {
+      return res.status(404).json({
+        message: "Drawing not found",
+      });
+    }
+
+    // Filter current user out of collaborators array
+    drawing.collaborators = drawing.collaborators.filter(
+      (id) => id.toString() !== req.user.id
+    );
+    await drawing.save();
+
+    res.status(200).json({
+      message: "Successfully left the collaboration space",
     });
   } catch (err) {
     res.status(500).json({
@@ -196,4 +301,5 @@ module.exports = {
   updateDrawing,
   deleteDrawing,
   shareDrawing,
+  leaveDrawing,
 };

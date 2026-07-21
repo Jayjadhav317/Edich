@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { boardService } from "../services/boardService";
 import { useCanvas } from "../hooks/useCanvas";
-import Canvas from "../components/Canvas";
+import Canvas from "../components/canvas";
 import Toolbar from "../components/Toolbar";
 import ShareModal from "../components/ShareModal";
 import { AuthContext } from "../context/AuthContext";
@@ -33,8 +33,27 @@ const CanvasPage = () => {
   const [saveStatus, setSaveStatus] = useState("saved");
   const [showShare, setShowShare] = useState(false);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isInvited = searchParams.get("invited") === "true";
+  const [showConfirmInvite, setShowConfirmInvite] = useState(isInvited);
+
   const initialLoadRef = useRef(true);
   const socketRef = useRef(null);
+
+  const handleAcceptInvite = () => {
+    setShowConfirmInvite(false);
+    setSearchParams({});
+  };
+
+  const handleRejectInvite = async () => {
+    try {
+      await boardService.leaveBoard(boardId);
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Error leaving board:", err);
+      navigate("/dashboard");
+    }
+  };
 
   useEffect(() => {
     const fetchBoardDetails = async () => {
@@ -224,6 +243,36 @@ const CanvasPage = () => {
 
       {showShare && board && (
         <ShareModal board={board} onClose={() => setShowShare(false)} />
+      )}
+
+      {showConfirmInvite && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center gap-4 animate-in fade-in zoom-in duration-200">
+            <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-[#6965db]">
+              <Share2 className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-800">Accept Collaboration?</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                You have been invited to collaborate on this workspace. Do you want to join?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full mt-2">
+              <button
+                onClick={handleRejectInvite}
+                className="flex-1 py-2.5 px-4 border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold rounded-xl text-sm transition-colors cursor-pointer"
+              >
+                No, Reject
+              </button>
+              <button
+                onClick={handleAcceptInvite}
+                className="flex-1 py-2.5 px-4 bg-[#6965db] hover:bg-[#5b57c7] text-white font-semibold rounded-xl text-sm shadow-md transition-colors cursor-pointer"
+              >
+                Yes, Accept
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

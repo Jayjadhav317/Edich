@@ -10,6 +10,7 @@ const {
   updateDrawing,
   deleteDrawing,
   shareDrawing,
+  leaveDrawing,
 } = require("../controllers/drawing.controller");
 
 router.post("/", authMiddleware, createDrawing);
@@ -23,5 +24,7 @@ router.put("/:id", authMiddleware, updateDrawing);
 router.delete("/:id", authMiddleware, deleteDrawing);
 
 router.post("/:id/share", authMiddleware, shareDrawing);
+
+router.post("/:id/leave", authMiddleware, leaveDrawing);
 
 module.exports = router;
