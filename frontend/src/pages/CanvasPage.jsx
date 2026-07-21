@@ -30,13 +30,12 @@ const CanvasPage = () => {
   const [title, setTitle] = useState("Untitled Drawing");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState("saved"); // "saved", "saving", "modified"
+  const [saveStatus, setSaveStatus] = useState("saved");
   const [showShare, setShowShare] = useState(false);
 
   const initialLoadRef = useRef(true);
   const socketRef = useRef(null);
 
-  // Load board details and elements on mount, and join Socket.IO room
   useEffect(() => {
     const fetchBoardDetails = async () => {
       try {
@@ -155,7 +154,6 @@ const CanvasPage = () => {
           </div>
         </div>
 
-        {/* Right Action buttons */}
         <div className="flex items-center gap-2">
           {isOwner && (
             <button
@@ -182,12 +180,9 @@ const CanvasPage = () => {
         </div>
       </header>
 
-      {/* Drawing Space Container */}
       <div className="relative flex-1 bg-slate-50 overflow-hidden">
-        {/* Background container for collaborative room view */}
         <div id="parentDomID" className="absolute inset-0 z-0"></div>
 
-        {/* Local drawing canvas */}
         <Canvas
           selectedTool={selectedTool}
           elements={elements}

@@ -16,6 +16,7 @@ const signup = async (req, res) => {
       name,
       email,
       password,
+
     });
 
     await user.save();
@@ -25,11 +26,11 @@ const signup = async (req, res) => {
       user,
     });
   } catch (err) {
-  console.error("Signup Error:", err);
+    console.error("Signup Error:", err);
     res.status(500).json({
-    message: err.message,
-  });
-}
+      message: err.message,
+    });
+  }
 };
 
 module.exports = signup;
