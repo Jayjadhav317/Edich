@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { TOOLS } from "../constants/tools";
-import { getElementAtPosition } from "../utils/hitTest";
+import { getElementAtPosition, getResizeHandleAtPosition } from "../utils/hitTest";
 import { drawAllElements, drawSelectionBox, clearCanvas } from "../utils/canvasHelpers";
 
 const FONT_SIZE = 20;
@@ -10,7 +10,7 @@ const LINE_HEIGHT_MULTIPLIER = 1.25;
 const LINE_HEIGHT_PX = FONT_SIZE * LINE_HEIGHT_MULTIPLIER;
 const VERTICAL_OFFSET = (LINE_HEIGHT_PX - FONT_SIZE) / 2;
 
-const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
+const Canvas = ({ selectedTool, elements, setElements, rawSetElements, broadcastElements }) => {
   const canvasRef = useRef(null);
   const [selectedElement, setSelectedElement] = useState(null);
   
@@ -18,6 +18,8 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
   const actionRef = useRef("none");
   const startCoordsRef = useRef({ x: 0, y: 0 });
   const snapshotElementRef = useRef(null);
+  const resizeHandleRef = useRef(null);
+  const isAddingTextRef = useRef(false);
 
   useEffect(() => {
     elementsRef.current = elements;
@@ -83,8 +85,9 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
       setSelectedElement(null);
     }
     if (tool !== TOOLS.TEXT) {
-      setTextBox(null);
-      setText("");
+      if (textBox) {
+        addText();
+      }
     }
   }, [selectedTool]);
 
@@ -97,34 +100,42 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
     };
   };
 
-  const addText = () => {
-    if (!text.trim()) {
+  const addText = (newTextBoxAfter = null) => {
+    if (isAddingTextRef.current) return;
+    isAddingTextRef.current = true;
+
+    try {
+      if (!text.trim()) {
+        setText("");
+        setTextBox(newTextBoxAfter);
+        return;
+      }
+
+      const dims = getTextAreaDims();
+      const textElement = {
+        id: Date.now().toString(),
+        type: "text",
+        x: textBox.x,
+        y: textBox.y,
+        text: text,
+        fontSize: FONT_SIZE,
+        fontFamily: FONT_FAMILY,
+        lineHeight: LINE_HEIGHT_PX,
+        width: dims.width,
+        height: dims.height,
+        strokeColor: "black",
+        strokeWidth: 2,
+      };
+
+      const nextElements = [...elementsRef.current, textElement];
+      elementsRef.current = nextElements;
+      setElements(nextElements);
+      if (broadcastElements) broadcastElements(nextElements);
       setText("");
-      setTextBox(null);
-      return;
+      setTextBox(newTextBoxAfter);
+    } finally {
+      isAddingTextRef.current = false;
     }
-
-    const dims = getTextAreaDims();
-    const textElement = {
-      id: Date.now().toString(),
-      type: "text",
-      x: textBox.x,
-      y: textBox.y,
-      text: text,
-      fontSize: FONT_SIZE,
-      fontFamily: FONT_FAMILY,
-      lineHeight: LINE_HEIGHT_PX,
-      width: dims.width,
-      height: dims.height,
-      strokeColor: "black",
-      strokeWidth: 2,
-    };
-
-    const nextElements = [...elementsRef.current, textElement];
-    elementsRef.current = nextElements;
-    setElements(nextElements);
-    setText("");
-    setTextBox(null);
   };
 
   const getTextAreaDims = () => {
@@ -158,7 +169,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
     const tool = Number(selectedTool);
 
     if (textBox && tool === TOOLS.TEXT) {
-      addText();
+      addText({ x, y });
       return;
     }
 
@@ -174,6 +185,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
       const nextElements = [...elementsRef.current, newElement];
       elementsRef.current = nextElements;
       setElements(nextElements);
+      if (broadcastElements) broadcastElements(nextElements);
       return;
     }
 
@@ -193,6 +205,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
       const nextElements = [...elementsRef.current, newElement];
       elementsRef.current = nextElements;
       setElements(nextElements);
+      if (broadcastElements) broadcastElements(nextElements);
       return;
     }
 
@@ -212,6 +225,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
       const nextElements = [...elementsRef.current, newElement];
       elementsRef.current = nextElements;
       setElements(nextElements);
+      if (broadcastElements) broadcastElements(nextElements);
       return;
     }
 
@@ -231,6 +245,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
       const nextElements = [...elementsRef.current, newElement];
       elementsRef.current = nextElements;
       setElements(nextElements);
+      if (broadcastElements) broadcastElements(nextElements);
       return;
     }
 
@@ -241,15 +256,23 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
     }
 
     if (tool === TOOLS.SELECT) {
-      const clickedElement = getElementAtPosition(x, y, elementsRef.current);
-      if (clickedElement) {
-        setSelectedElement(clickedElement);
-        snapshotElementRef.current = JSON.parse(JSON.stringify(clickedElement));
+      const handle = getResizeHandleAtPosition(x, y, selectedElement);
+      if (handle) {
+        actionRef.current = "resizing";
+        resizeHandleRef.current = handle;
+        snapshotElementRef.current = JSON.parse(JSON.stringify(selectedElement));
         startCoordsRef.current = { x, y };
-        actionRef.current = "moving";
       } else {
-        setSelectedElement(null);
-        actionRef.current = "none";
+        const clickedElement = getElementAtPosition(x, y, elementsRef.current);
+        if (clickedElement) {
+          setSelectedElement(clickedElement);
+          snapshotElementRef.current = JSON.parse(JSON.stringify(clickedElement));
+          startCoordsRef.current = { x, y };
+          actionRef.current = "moving";
+        } else {
+          setSelectedElement(null);
+          actionRef.current = "none";
+        }
       }
       return;
     }
@@ -261,6 +284,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
         const nextElements = elementsRef.current.filter((el) => el.id !== hit.id);
         elementsRef.current = nextElements;
         setElements(nextElements);
+        if (broadcastElements) broadcastElements(nextElements);
       }
       return;
     }
@@ -270,7 +294,6 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
     const { x, y } = getMousePosition(e);
 
     if (actionRef.current === "drawing") {
-      console.log("Canvas handleMouseMove - action is drawing, elements length:", elementsRef.current.length);
       const updatedElements = [...elementsRef.current];
       const index = updatedElements.length - 1;
       const element = updatedElements[index];
@@ -306,6 +329,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
 
       elementsRef.current = updatedElements;
       rawSetElements(updatedElements);
+      if (broadcastElements) broadcastElements(updatedElements);
       return;
     }
 
@@ -343,6 +367,66 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
 
       elementsRef.current = updatedElements;
       rawSetElements(updatedElements);
+      if (broadcastElements) broadcastElements(updatedElements);
+      return;
+    }
+
+    if (actionRef.current === "resizing" && selectedElement && snapshotElementRef.current) {
+      const updatedElements = [...elementsRef.current];
+      const index = updatedElements.findIndex((el) => el.id === selectedElement.id);
+      if (index === -1) return;
+      const element = updatedElements[index];
+
+      if (element.type === "line") {
+        if (resizeHandleRef.current === "x1y1") {
+          updatedElements[index] = {
+            ...element,
+            x1: x,
+            y1: y,
+          };
+        } else if (resizeHandleRef.current === "x2y2") {
+          updatedElements[index] = {
+            ...element,
+            x2: x,
+            y2: y,
+          };
+        }
+      } else {
+        const snap = snapshotElementRef.current;
+        if (resizeHandleRef.current === "br") {
+          updatedElements[index] = {
+            ...element,
+            width: x - element.x,
+            height: y - element.y,
+          };
+        } else if (resizeHandleRef.current === "tl") {
+          updatedElements[index] = {
+            ...element,
+            x: x,
+            y: y,
+            width: snap.x + snap.width - x,
+            height: snap.y + snap.height - y,
+          };
+        } else if (resizeHandleRef.current === "tr") {
+          updatedElements[index] = {
+            ...element,
+            y: y,
+            width: x - element.x,
+            height: snap.y + snap.height - y,
+          };
+        } else if (resizeHandleRef.current === "bl") {
+          updatedElements[index] = {
+            ...element,
+            x: x,
+            width: snap.x + snap.width - x,
+            height: y - element.y,
+          };
+        }
+      }
+
+      elementsRef.current = updatedElements;
+      rawSetElements(updatedElements);
+      if (broadcastElements) broadcastElements(updatedElements);
       return;
     }
 
@@ -352,6 +436,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
         const nextElements = elementsRef.current.filter((el) => el.id !== hit.id);
         elementsRef.current = nextElements;
         setElements(nextElements);
+        if (broadcastElements) broadcastElements(nextElements);
       }
       return;
     }
@@ -359,10 +444,12 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
 
   const handleMouseUp = () => {
     console.log("Canvas handleMouseUp - action:", actionRef.current, "elements length:", elementsRef.current.length);
-    if (actionRef.current === "drawing" || actionRef.current === "moving") {
+    if (actionRef.current === "drawing" || actionRef.current === "moving" || actionRef.current === "resizing") {
       actionRef.current = "none";
       snapshotElementRef.current = null;
+      resizeHandleRef.current = null;
       setElements([...elementsRef.current]);
+      if (broadcastElements) broadcastElements(elementsRef.current);
     } else if (actionRef.current === "erasing") {
       actionRef.current = "none";
     }
@@ -383,7 +470,7 @@ const Canvas = ({ selectedTool, elements, setElements, rawSetElements }) => {
               addText();
             }
           }}
-          onBlur={addText}
+          onBlur={() => addText()}
           style={{
             position: "absolute",
             left: textBox.x,

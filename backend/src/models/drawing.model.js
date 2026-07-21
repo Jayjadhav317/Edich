@@ -13,30 +13,10 @@ const drawingSchema = new mongoose.Schema(
       required: true,
     },
 
-    elements: [
-      {
-        id: String,
-        type: String,
-
-        x: Number,
-        y: Number,
-
-        width: Number,
-        height: Number,
-
-        strokeColor: String,
-        backgroundColor: String,
-
-        text: String,
-
-        points: [
-          {
-            x: Number,
-            y: Number,
-          },
-        ],
-      },
-    ],
+    elements: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
 
     collaborators: [
       {

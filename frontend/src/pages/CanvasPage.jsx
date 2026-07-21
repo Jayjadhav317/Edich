@@ -6,7 +6,8 @@ import Canvas from "../components/Canvas";
 import Toolbar from "../components/Toolbar";
 import ShareModal from "../components/ShareModal";
 import { AuthContext } from "../context/AuthContext";
-import { ArrowLeft, Save, Share2, Loader2, CloudLightning, Check, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Share2, Loader2, Check, AlertCircle } from "lucide-react";
+import { io } from "socket.io-client";
 
 const CanvasPage = () => {
   const { boardId } = useParams();
@@ -33,8 +34,9 @@ const CanvasPage = () => {
   const [showShare, setShowShare] = useState(false);
 
   const initialLoadRef = useRef(true);
+  const socketRef = useRef(null);
 
-  // Load board details and elements on mount
+  // Load board details and elements on mount, and join Socket.IO room
   useEffect(() => {
     const fetchBoardDetails = async () => {
       try {
@@ -50,6 +52,20 @@ const CanvasPage = () => {
       }
     };
     fetchBoardDetails();
+
+    // Establish Socket.IO real-time connection
+    const socket = io("http://localhost:3000");
+    socketRef.current = socket;
+    socket.emit("join-room", boardId);
+
+    // Receive drawing events in real-time
+    socket.on("canvas-update", (updatedElements) => {
+      rawSetElements(updatedElements);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [boardId]);
 
   // Track edits to flag unsaved changes
@@ -61,6 +77,12 @@ const CanvasPage = () => {
     }
     setSaveStatus("modified");
   }, [elements, title]);
+
+  const broadcastElements = (updatedElements) => {
+    if (socketRef.current) {
+      socketRef.current.emit("canvas-update", { boardId, elements: updatedElements });
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -171,6 +193,7 @@ const CanvasPage = () => {
           elements={elements}
           setElements={setElements}
           rawSetElements={rawSetElements}
+          broadcastElements={broadcastElements}
         />
 
         {/* Overlay drawing tools Toolbar */}

@@ -1,7 +1,6 @@
 const Drawing = require("../models/drawing.model");
 const User = require("../models/user.model");
 
-// Create Drawing
 const createDrawing = async (req, res) => {
   try {
     const { title } = req.body;
@@ -27,7 +26,7 @@ const createDrawing = async (req, res) => {
   }
 };
 
-// Get All Drawings of Logged-in User (Owner or Collaborator)
+
 const getAllDrawings = async (req, res) => {
   try {
     const drawings = await Drawing.find({
@@ -46,7 +45,6 @@ const getAllDrawings = async (req, res) => {
   }
 };
 
-// Get Single Drawing
 const getDrawingById = async (req, res) => {
   try {
     const drawing = await Drawing.findOne({
@@ -72,8 +70,12 @@ const getDrawingById = async (req, res) => {
   }
 };
 
-// Update Drawing
+
 const updateDrawing = async (req, res) => {
+  console.log("===== UPDATE DRAWING API HIT =====");
+  console.log("Params:", req.params);
+  console.log("Body:", req.body);
+
   try {
     const { title, elements } = req.body;
 
@@ -90,7 +92,7 @@ const updateDrawing = async (req, res) => {
         elements,
       },
       {
-        new: true,
+        returnDocument: "after",
       }
     );
 

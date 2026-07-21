@@ -57,3 +57,49 @@ export const getElementAtPosition = (x, y, elements) => {
   }
   return null;
 };
+
+// Checks if coordinates (x, y) hit a resize handle of the selected element
+export const getResizeHandleAtPosition = (x, y, element) => {
+  if (!element) return null;
+
+  const handleSize = 6;
+  const padding = 8;
+
+  if (element.type === "line") {
+    // Treat the two endpoints as handles
+    if (Math.abs(x - element.x1) <= handleSize + 4 && Math.abs(y - element.y1) <= handleSize + 4) {
+      return "x1y1";
+    }
+    if (Math.abs(x - element.x2) <= handleSize + 4 && Math.abs(y - element.y2) <= handleSize + 4) {
+      return "x2y2";
+    }
+    return null;
+  }
+
+  if (element.type === "pen") {
+    // Pencil strokes/pen paths do not support standard corner handle resizing
+    return null;
+  }
+
+  // Rectangle, Ellipse, Text
+  const minX = Math.min(element.x, element.x + element.width);
+  const maxX = Math.max(element.x, element.x + element.width);
+  const minY = Math.min(element.y, element.y + element.height);
+  const maxY = Math.max(element.y, element.y + element.height);
+
+  const handles = {
+    tl: { x: minX - padding, y: minY - padding },
+    tr: { x: maxX + padding, y: minY - padding },
+    bl: { x: minX - padding, y: maxY + padding },
+    br: { x: maxX + padding, y: maxY + padding },
+  };
+
+  for (const [name, pos] of Object.entries(handles)) {
+    if (Math.abs(x - pos.x) <= handleSize + 4 && Math.abs(y - pos.y) <= handleSize + 4) {
+      return name;
+    }
+  }
+
+  return null;
+};
+
