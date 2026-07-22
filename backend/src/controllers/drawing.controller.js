@@ -201,6 +201,9 @@ const shareDrawing = async (req, res) => {
               user: process.env.SMTP_USER,
               pass: process.env.SMTP_PASS,
             },
+            tls: {
+              rejectUnauthorized: false
+            },
             connectionTimeout: 5000, // abort socket handshake after 5s
             greetingTimeout: 5000,
             socketTimeout: 5000,
@@ -224,8 +227,8 @@ const shareDrawing = async (req, res) => {
         }
 
         const mailOptions = {
-          from: isTest 
-            ? '"Excalidraw Clone" <no-reply@excalidrawclone.com>' 
+          from: isTest
+            ? '"Excalidraw Clone" <no-reply@excalidrawclone.com>'
             : (process.env.SMTP_FROM || process.env.SMTP_USER),
           to: email,
           subject: `Invitation to collaborate on: ${drawing.title}`,

@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async (to, subject, text) => {
     try {
         const info = await transporter.sendMail({
-            from: `"Excalidraw Clone" <${process.env.SMTP_USER}>`,
+            from: `"Excalidraw Clone" <${process.env.SMTP_FROM}>`,
             to,
             subject,
             text,
