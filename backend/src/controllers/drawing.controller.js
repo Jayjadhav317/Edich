@@ -204,6 +204,7 @@ const shareDrawing = async (req, res) => {
             tls: {
               rejectUnauthorized: false,
             },
+            family: 4, // force IPv4 connection resolution
             connectionTimeout: 30000,
             greetingTimeout: 30000,
             socketTimeout: 30000,
