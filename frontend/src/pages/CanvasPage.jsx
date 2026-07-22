@@ -71,8 +71,11 @@ const CanvasPage = () => {
     };
     fetchBoardDetails();
 
-    // Establish Socket.IO real-time connection
-    const socket = io("http://localhost:3000");
+    // Establish Socket.IO real-time connection using dynamic backend URL
+    const backendBaseUrl = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace("/api", "")
+      : "http://localhost:3000";
+    const socket = io(backendBaseUrl);
     socketRef.current = socket;
     socket.emit("join-room", boardId);
 

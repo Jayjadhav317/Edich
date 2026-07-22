@@ -52,11 +52,10 @@ const ShareModal = ({ board, onClose }) => {
         <div className="p-6">
           {message.text && (
             <div
-              className={`mb-4 p-3 rounded-lg text-sm font-medium border ${
-                message.type === "success"
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-100"
-                  : "bg-rose-50 text-rose-800 border-rose-100"
-              }`}
+              className={`mb-4 p-3 rounded-lg text-sm font-medium border ${message.type === "success"
+                ? "bg-emerald-50 text-emerald-800 border-emerald-100"
+                : "bg-rose-50 text-rose-800 border-rose-100"
+                }`}
             >
               {message.text}
             </div>

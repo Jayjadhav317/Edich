@@ -21,6 +21,10 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const data = await boardService.getBoards();
+
+      console.log("API Response:", data);
+      console.log("Is Array:", Array.isArray(data));
+
       setBoards(data);
     } catch (err) {
       console.error("Error fetching boards:", err);

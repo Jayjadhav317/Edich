@@ -1,5 +1,7 @@
 import axios from "axios";
 
+console.log("VITE_API_URL =", import.meta.env.VITE_API_URL);
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: {
@@ -8,7 +10,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Request Interceptor
+// Request Interceptor: Attach JWT Token from localStorage if present
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -20,7 +22,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor
+// Response Interceptor: Catch 401 Unauthorized errors and handle token expiration
 api.interceptors.response.use(
   (response) => response,
   (error) => {
