@@ -1,7 +1,7 @@
 const Drawing = require("../models/drawing.model");
 const User = require("../models/user.model");
 const nodemailer = require("nodemailer");
-const transporter = require("../utils/sendEmail");
+const sendEmail = require("../utils/sendEmail");
 
 const createDrawing = async (req, res) => {
   try {
@@ -188,12 +188,9 @@ const shareDrawing = async (req, res) => {
 
     setTimeout(async () => {
       try {
-        const isTest = !(process.env.SMTP_USER && process.env.SMTP_PASS);
+        const isTest = !(process.env.SMTP_USER && (process.env.SMTP_PASSWORD || process.env.SMTP_PASS));
 
-        const mailOptions = {
-          from: isTest
-            ? '"Excalidraw Clone" <no-reply@excalidrawclone.com>'
-            : (process.env.SMTP_FROM || process.env.SMTP_USER),
+        const mailData = {
           to: email,
           subject: `Invitation to collaborate on: ${drawing.title}`,
           text: `Hello,\n\nYou have been invited by ${senderName} to collaborate on their whiteboard drawing: "${drawing.title}".\n\nClick the link below to open the drawing:\n${frontendUrl}/canvas/${drawing._id}?invited=true\n\nHappy drawing!`,
@@ -213,10 +210,25 @@ const shareDrawing = async (req, res) => {
           `,
         };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log("Email sent successfully: %s", info.messageId);
         if (isTest) {
+          const testAccount = await nodemailer.createTestAccount();
+          const testTransporter = nodemailer.createTransport({
+            host: testAccount.smtp.host,
+            port: testAccount.smtp.port,
+            secure: testAccount.smtp.secure,
+            auth: {
+              user: testAccount.user,
+              pass: testAccount.pass,
+            },
+          });
+          const info = await testTransporter.sendMail({
+            from: '"Excalidraw Clone" <no-reply@excalidrawclone.com>',
+            ...mailData
+          });
           console.log("Ethereal test email preview URL: %s", nodemailer.getTestMessageUrl(info));
+        } else {
+          await sendEmail("gmail", mailData);
+          console.log("Email sent successfully via Gmail SMTP");
         }
       } catch (err) {
         console.error("SMTP Mail Send Error (Background):", err);

@@ -1,34 +1,41 @@
 const nodemailer = require("nodemailer");
 const dns = require("dns");
+require("dotenv").config();
 
 dns.lookup("smtp.gmail.com", { all: true }, (err, addresses) => {
-  console.log("DNS Lookup Results for smtp.gmail.com:", addresses);
+  console.log("DNS:", addresses);
 });
 
-const isSecure = process.env.SMTP_SECURE === "true";
-const port = Number(process.env.SMTP_PORT);
+const sendEmail = async (provider, data) => {
+  let host;
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: port,
-  secure: isSecure,
-  requireTLS: !isSecure && port === 587,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  lookup(hostname, options, callback) {
-    return dns.lookup(hostname, { family: 4 }, callback);
-  },
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
-});
+  if (provider === "gmail") {
+    host = "smtp.gmail.com";
+  } else {
+    host = "smtp.office365.com";
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  transporter.verify()
-    .then(() => console.log("SMTP Connected Successfully"))
-    .catch((err) => console.error("SMTP Verify Error:", err));
-}
+  const transporter = nodemailer.createTransport({
+    host: host,
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD || process.env.SMTP_PASS,
+    },
+    tls: {
+      rejectUnauthorized: true
+    }
+  });
 
-module.exports = transporter;
+  await transporter.sendMail({
+    from: `"${process.env.APP_NAME || "Excalidraw Clone"}" <${process.env.SMTP_USER}>`,
+    to: data.to,
+    subject: data.subject,
+    text: data.text,
+    html: data.html,
+    attachments: data.attachments || []
+  });
+};
+
+module.exports = sendEmail;
