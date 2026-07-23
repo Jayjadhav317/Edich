@@ -1,3 +1,8 @@
+const dns = require("dns");
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder("ipv4first");
+}
+
 const Drawing = require("../models/drawing.model");
 const User = require("../models/user.model");
 const nodemailer = require("nodemailer");
@@ -185,8 +190,6 @@ const shareDrawing = async (req, res) => {
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
-    // Send email asynchronously in the background via setTimeout to ensure the event loop 
-    // immediately flushes the HTTP response to the client.
     setTimeout(async () => {
       try {
         let transporter;
@@ -195,8 +198,8 @@ const shareDrawing = async (req, res) => {
         if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
           transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT || "465"),
-            secure: process.env.SMTP_SECURE === "true",
+            port: 587,
+            secure: false,
             auth: {
               user: process.env.SMTP_USER,
               pass: process.env.SMTP_PASS,
@@ -204,7 +207,6 @@ const shareDrawing = async (req, res) => {
             tls: {
               rejectUnauthorized: false,
             },
-            family: 4, // force IPv4 connection resolution
             connectionTimeout: 30000,
             greetingTimeout: 30000,
             socketTimeout: 30000,
