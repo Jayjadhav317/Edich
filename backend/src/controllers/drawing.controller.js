@@ -196,16 +196,36 @@ const shareDrawing = async (req, res) => {
         let isTest = false;
 
         if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+          let smtpHost = process.env.SMTP_HOST;
+          let servername = undefined;
+
+          try {
+            const ipAddress = await new Promise((resolve, reject) => {
+              dns.lookup(smtpHost, { family: 4 }, (err, address) => {
+                if (err) reject(err);
+                else resolve(address);
+              });
+            });
+            if (ipAddress) {
+              servername = smtpHost;
+              smtpHost = ipAddress;
+            }
+          } catch (dnsErr) {
+            console.error("Failed to resolve SMTP_HOST via IPv4:", dnsErr);
+          }
+
           transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
+            host: smtpHost,
             port: 587,
             secure: false,
+
             auth: {
               user: process.env.SMTP_USER,
               pass: process.env.SMTP_PASS,
             },
             tls: {
               rejectUnauthorized: false,
+              servername: servername,
             },
             connectionTimeout: 30000,
             greetingTimeout: 30000,
