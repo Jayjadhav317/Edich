@@ -28,6 +28,10 @@ const sendEmail = async (provider, data) => {
     }
   });
 
+  console.log("Verifying connection in sendEmail...");
+  await transporter.verify();
+  console.log("SMTP Verified");
+
   await transporter.sendMail({
     from: `"${process.env.APP_NAME || "Excalidraw Clone"}" <${process.env.SMTP_USER}>`,
     to: data.to,
