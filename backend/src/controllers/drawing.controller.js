@@ -227,8 +227,8 @@ const shareDrawing = async (req, res) => {
           });
           console.log("Ethereal test email preview URL: %s", nodemailer.getTestMessageUrl(info));
         } else {
-          await sendEmail("gmail", mailData);
-          console.log("Email sent successfully via Gmail SMTP");
+          await sendEmail("brevo", mailData);
+          console.log("Email sent successfully via Brevo SMTP");
         }
       } catch (err) {
         console.error("SMTP Mail Send Error (Background):", err);
