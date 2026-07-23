@@ -1,11 +1,7 @@
-const dns = require("dns");
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder("ipv4first");
-}
-
 const Drawing = require("../models/drawing.model");
 const User = require("../models/user.model");
 const nodemailer = require("nodemailer");
+const transporter = require("../utils/sendEmail");
 
 const createDrawing = async (req, res) => {
   try {
@@ -192,61 +188,7 @@ const shareDrawing = async (req, res) => {
 
     setTimeout(async () => {
       try {
-        let transporter;
-        let isTest = false;
-
-        if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-          let smtpHost = process.env.SMTP_HOST;
-          let servername = undefined;
-
-          try {
-            const ipAddress = await new Promise((resolve, reject) => {
-              dns.lookup(smtpHost, { family: 4 }, (err, address) => {
-                if (err) reject(err);
-                else resolve(address);
-              });
-            });
-            if (ipAddress) {
-              servername = smtpHost;
-              smtpHost = ipAddress;
-            }
-          } catch (dnsErr) {
-            console.error("Failed to resolve SMTP_HOST via IPv4:", dnsErr);
-          }
-
-          transporter = nodemailer.createTransport({
-            host: smtpHost,
-            port: parseInt(process.env.SMTP_PORT || "587"),
-            secure: process.env.SMTP_SECURE === "true",
-            auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
-            },
-            tls: {
-              rejectUnauthorized: false,
-              servername: servername,
-            },
-            connectionTimeout: 30000,
-            greetingTimeout: 30000,
-            socketTimeout: 30000,
-          });
-        } else {
-          isTest = true;
-          // Fallback to ethereal email test account for zero-config testing
-          const testAccount = await nodemailer.createTestAccount();
-          transporter = nodemailer.createTransport({
-            host: testAccount.smtp.host,
-            port: testAccount.smtp.port,
-            secure: testAccount.smtp.secure,
-            auth: {
-              user: testAccount.user,
-              pass: testAccount.pass,
-            },
-            connectionTimeout: 5000,
-            greetingTimeout: 5000,
-            socketTimeout: 5000,
-          });
-        }
+        const isTest = !(process.env.SMTP_USER && process.env.SMTP_PASS);
 
         const mailOptions = {
           from: isTest
